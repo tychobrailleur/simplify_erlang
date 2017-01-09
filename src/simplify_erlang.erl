@@ -2,8 +2,8 @@
 
 -include("include/simplify_erlang.hrl").
 
--define(BASE_URL, "sandbox.simplify.com").
--define(BASE_PORT, 443).
+-define(BASE_SANDBOX_URL, "https://sandbox.simplify.com/v1/api").
+-define(BASE_LIVE_URL, "https://api.simplify.com/v1/api").
 
 -define(USER_AGENT, "Erlang SDK 0.0.0").
 
@@ -36,18 +36,20 @@ create_payment(#payment{amount=Amount,
                                <<"expMonth">> => ExpiryMonth,
                                <<"expYear">> => ExpiryYear,
                                <<"cvc">> => Cvc}}),
+    ApiUrl = build_url(PublicKey),
 
     JwsHeader = #{
       <<"typ">> => <<"JWT">>,
       <<"alg">> => <<"HS256">>,
       <<"kid">> => list_to_binary(PublicKey),
-      <<"api.simplifycommerce.com/uri">> => build_url(),
+      <<"api.simplifycommerce.com/uri">> => list_to_binary(ApiUrl),
       <<"api.simplifycommerce.com/timestamp">> => os:system_time(millisecond),
       <<"api.simplifycommerce.com/nonce">> => random:uniform(100000000)
      },
 
+    {ok, { _ , _, Host, Port, _, _ }} = http_uri:parse(ApiUrl),
     JwsRequest = jws_signing:jws_encode(JwsHeader, Request, PrivateKey),
-    {ok, ConnPid} = gun:open(?BASE_URL, ?BASE_PORT),
+    {ok, ConnPid} = gun:open(Host, Port),
     StreamRef = gun:post(ConnPid, "/v1/api/payment",
                          [ {<<"content-type">>, "application/json"},
                            {<<"Accept">>, "application/json"},
@@ -62,10 +64,15 @@ create_payment(#payment{amount=Amount,
     end.
 
 
-
 %%====================================================================
 %% Internal functions
 %%====================================================================
 
-build_url() ->
-    list_to_binary("https://" ++ ?BASE_URL ++ "/v1/api/payment").
+api_host("lvpb_" ++ _Rest) ->
+    ?BASE_LIVE_URL;
+api_host("sbpb_" ++ _Rest) ->
+    ?BASE_SANDBOX_URL.
+
+
+build_url(Key) ->
+    api_host(Key) ++ "/payment".
