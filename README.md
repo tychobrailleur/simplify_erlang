@@ -31,3 +31,8 @@ simplify_erlang:create_payment(#payment{amount=1000, currency = <<"USD">>,
                                    #credentials{private_key="[PRIVATE KEY]",
                                                 public_key="[PUBLIC_KEY]"}).
 ```
+
+
+# License
+
+ASLv2. Copyright (c) 2017 Sébastien Le Callonnec
